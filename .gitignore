@@ -1,0 +1,4 @@
+node_modules/
+game-state.json
+# JParty sound clips live here locally but are probably copyrighted — never commit them
+public/sounds/*.wav

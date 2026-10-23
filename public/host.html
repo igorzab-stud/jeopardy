@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JEOPARDY! — Host Console</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">JEOPARDY! <small>HOST CONSOLE 🎤</small></div>
+  <div class="nav">
+    <button data-mute class="ghost" onclick="JSound.setMuted(!JSound.isMuted())">🔊 Mute</button>
+    <a href="/board">Board</a><a href="/player">Join</a>
+  </div>
+</div>
+<div class="wrap">
+  <div class="host-layout">
+    <div>
+      <div class="panel">
+        <b class="gold">🎬 OPENING SHOW</b> <span id="showPhase" class="muted"></span>
+        <div class="btn-row">
+          <button id="btnStartShow" onclick="send({type:'host_start_show'})">🎬 Start show (reveal categories + theme)</button>
+          <button id="btnSkipShow" class="ghost" onclick="send({type:'host_skip_show'})">⏩ Skip intro</button>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <b class="gold">BOARD</b> <span class="muted">— click a tile to open it (unlocks after the show)</span>
+        <div id="board" class="board-grid" style="margin-top:10px"></div>
+        <div class="btn-row">
+          <button class="ghost" onclick="send({type:'host_dd_reroll'})">🎲 Re-roll Daily Double</button>
+          <span class="muted">one hidden tile per round, marked ⭐ for your eyes only</span>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <b class="gold">CURRENT CLUE</b>
+        <div id="curQ" style="font-size:20px;font-weight:800;margin:8px 0"></div>
+        <img id="curImg" alt="" onerror="this.style.display='none'" style="display:none;max-height:140px;border-radius:8px;border:2px solid var(--gold);margin-top:4px">
+        <div id="curA" style="font-size:18px;color:var(--gold);font-weight:700"></div>
+        <div id="ddCtl" style="margin:8px 0"></div>
+        <div class="btn-row">
+          <button onclick="send({type:'host_open_buzzers'})">🔔 Reopen buzzers</button>
+          <button class="ghost" onclick="send({type:'host_close_buzzers'})">Close buzzers</button>
+          <button class="ghost" onclick="send({type:'host_reset_buzzers'})">Reset buzzers</button>
+          <button onclick="send({type:'host_reveal_answer'})">👁 Reveal / hide answer</button>
+        </div>
+        <div class="btn-row">
+          <button class="good" onclick="award(true)">✅ Correct (+value)</button>
+          <button class="danger" onclick="award(false)">❌ Wrong (−value)</button>
+          <button class="ghost" onclick="send({type:'host_close_tile'})">Close tile ✓ done</button>
+          <button class="ghost" onclick="send({type:'host_close_tile', markAnswered:false})">Close w/o marking</button>
+        </div>
+        <div class="btn-row">
+          <button class="ghost" onclick="send({type:'host_timer', seconds:10})">⏱ 10s timer</button>
+          <button class="ghost" onclick="send({type:'host_timer', seconds:30})">⏱ 30s timer</button>
+          <button class="ghost" onclick="send({type:'host_stop_timer'})">Stop timer</button>
+          <button class="ghost" onclick="JSound.thinkMusic(30)">🎵 Think music</button>
+        </div>
+        <div id="buzzInfo" class="muted"></div>
+        <div id="timerInfo" class="timer-big"></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <b class="gold">🔊 SOUNDBOARD</b> <span class="muted">— plays on ALL screens</span>
+        <div class="btn-row">
+          <button class="ghost" onclick="send({type:'host_sound', event:'theme_toggle'})">🎺 Theme on/off</button>
+          <button class="ghost" onclick="send({type:'host_sound', event:'think'})">🎵 Final music</button>
+          <button class="ghost" onclick="send({type:'host_sound', event:'dd'})">⭐ Daily Double!</button>
+          <button class="ghost" onclick="send({type:'host_sound', event:'correct'})">✅ Correct chime</button>
+          <button class="ghost" onclick="send({type:'host_sound', event:'applause'})">👏 Applause</button>
+          <button class="ghost" onclick="send({type:'host_sound', event:'wrong'})">📯 Wrong</button>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <b class="gold">DANGER ZONE</b>
+        <div class="btn-row">
+          <button class="ghost" onclick="send({type:'host_reset_scores'})">Reset scores</button>
+          <button class="danger" onclick="if(confirm('Reset whole board?'))send({type:'host_reset_board'})">Reset board</button>
+        </div>
+        <div class="muted">Edit questions in <b>questions.json</b> then hit Reset board (or restart server).</div>
+      </div>
+    </div>
+    <div>
+      <div class="panel host-players">
+        <b class="gold">PLAYERS</b> <span class="muted" id="conn"></span>
+        <div id="plist"></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <b class="gold">📶 CONNECT DEVICES</b>
+        <div id="netInfo" class="muted" style="margin:8px 0"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div><div class="muted">Players scan to join:</div><span class="qr"><img id="qrPlayer" width="180" height="180" alt="player QR"></span><div id="urlPlayer" class="muted"></div></div>
+          <div><div class="muted">TV board:</div><span class="qr"><img id="qrBoard" width="180" height="180" alt="board QR"></span><div id="urlBoard" class="muted"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/sound.js"></script>
+<script src="/common.js"></script>
+<script>
+let S = null;
+const sock = J.connect({
+  onStatus: s => document.getElementById('conn').textContent = s,
+  onState: st => { S = st; render(st); },
+});
+function send(o) { sock.send(o); }
+function award(correct) {
+  if (!S || !S.current) return alert('Open a tile first!');
+  if (S.current.dd && !S.current.ddPlayer) return alert('Daily Double! Tap ⭐ on the player who found it.');
+  if (S.current.dd && S.current.wager == null) return alert('Waiting for the wager… (player enters it on their phone, or type it below)');
+  const pid = S.current.dd ? S.current.ddPlayer : S.buzz.winnerId;
+  if (!S.current.dd && !pid) return alert('Nobody buzzed yet! Pick a player below, or open buzzers first.');
+  send({ type: 'host_award', playerId: pid, correct });
+}
+
+function render(state) {
+  const playing = state.show.phase === 'playing';
+  const revealing = state.show.phase === 'revealing';
+  document.getElementById('showPhase').textContent =
+    state.show.phase === 'idle' ? '— press Start show!' :
+    revealing ? `— revealing… ${state.show.revealed}/6` : '— live! open a tile';
+  document.getElementById('btnStartShow').style.display = state.show.phase === 'idle' ? '' : 'none';
+  document.getElementById('btnSkipShow').style.display = revealing ? '' : 'none';
+
+  const b = document.getElementById('board');
+  b.innerHTML = '';
+  state.board.forEach((c, i) => {
+    const h = document.createElement('div');
+    h.className = 'cat-header'; h.style.fontSize = '12px';
+    h.textContent = i < state.show.revealed ? c.title : '?';
+    if (i >= state.show.revealed) h.style.opacity = '.35';
+    b.appendChild(h);
+  });
+  for (let r = 0; r < 5; r++) {
+    state.board.forEach((cat, c) => {
+      const clue = cat.clues[r];
+      const d = document.createElement('div');
+      const isCur = state.current && state.current.cat === c && state.current.idx === r;
+      d.className = 'tile' + (clue.answered ? ' answered' : '') + (isCur ? ' lit' : '');
+      d.style.padding = '10px 0'; d.style.fontSize = '18px';
+      if (!playing) d.style.opacity = '.35';
+      const isDD = state.dd && state.dd.cat === c && state.dd.idx === r && !clue.answered;
+      if (isDD) d.style.borderColor = '#fff';
+      d.textContent = clue.answered ? '' : (isDD ? '⭐$' : '$') + clue.value;
+      d.onclick = () => {
+        if (!playing) return alert('Start the show first! 🎬');
+        send({ type: 'host_open_tile', cat: c, idx: r });
+      };
+      b.appendChild(d);
+    });
+  }
+  // current
+  if (state.current) {
+    const cur = state.current;
+    document.getElementById('curQ').textContent = (cur.dd ? '⭐ DD Q: ' : 'Q: ') + cur.question;
+    document.getElementById('curA').textContent = 'A: ' + cur.answer + (cur.answerRevealed ? ' (shown on board)' : ' (hidden on board)');
+    const curImg = document.getElementById('curImg');
+    // thumbnail so the host sees the picture loaded OK (hidden on DD splash)
+    if (cur.image && !(cur.dd && cur.wager == null)) {
+      if (curImg.dataset.src !== cur.image) {
+        curImg.dataset.src = cur.image;
+        curImg.src = cur.image;
+      }
+      curImg.style.display = '';
+    } else {
+      curImg.style.display = 'none';
+      curImg.removeAttribute('src');
+      delete curImg.dataset.src;
+    }
+    // Daily Double controls
+    const ddCtl = document.getElementById('ddCtl');
+    if (cur.dd) {
+      const dp = cur.ddPlayer && state.players.find(p => p.id === cur.ddPlayer);
+      if (!cur.ddPlayer) {
+        ddCtl.innerHTML = `<b class="gold">⭐ DAILY DOUBLE!</b> <span class="muted">Tap ⭐ next to the player who found it.</span>`;
+      } else if (cur.wager == null) {
+        let top = 200;
+        state.board.forEach(c => c.clues.forEach(cl => { if (!cl.answered && cl.value > top) top = cl.value; }));
+        const max = Math.max(top, dp ? dp.score : 0);
+        ddCtl.innerHTML = `<b class="gold">⭐ ${escapeHtml(dp ? dp.name : '?')}</b> <span class="muted">to wager (max $${max})… or type it:</span>
+          <span style="display:inline-flex;gap:6px;margin-top:6px"><input id="ddWager" type="number" min="0" step="100" value="${max}" style="width:130px">
+          <button onclick="send({type:'host_dd_wager', amount: Number(document.getElementById('ddWager').value)})">Set wager</button></span>`;
+      } else {
+        ddCtl.innerHTML = `<b class="gold">⭐ ${escapeHtml(dp ? dp.name : '?')} wagered $${cur.wager}</b> <span class="muted">— judge with ✅/❌</span>`;
+      }
+    } else ddCtl.innerHTML = '';
+  } else {
+    document.getElementById('curQ').textContent = 'No tile open — click one above.';
+    document.getElementById('curA').textContent = '';
+    document.getElementById('ddCtl').innerHTML = '';
+  }
+  // buzz info
+  const names = id => { const p = state.players.find(x => x.id === id); return p ? p.name : '?'; };
+  const outNames = (state.buzz.wrongIds || []).map(names).join(', ');
+  document.getElementById('buzzInfo').innerHTML =
+    `Buzzers: <b>${state.buzz.open ? 'OPEN (auto on tile open)' : 'closed'}</b>` +
+    (state.buzz.winnerId ? ` • Winner: <b class="gold">${escapeHtml(names(state.buzz.winnerId))}</b>` : '') +
+    (state.buzz.order.length > 1 ? ` • Queue: ${state.buzz.order.map(n=>escapeHtml(names(n))).join(' → ')}` : '') +
+    (outNames ? ` • Out ❌: ${escapeHtml(outNames)}` : '');
+
+  // players
+  const struck = id => (state.buzz.wrongIds || []).includes(id) && state.current;
+  document.getElementById('plist').innerHTML = state.players.map(p => `
+    <div class="row">
+      <span class="nm">${escapeHtml(p.name)} ${p.connected ? '' : '💤'}${struck(p.id) ? ' ❌' : ''}</span>
+      <span class="sc">$${p.score}</span>
+      ${state.current && state.current.dd && !state.current.ddPlayer ? `<button style="padding:4px 10px" onclick="send({type:'host_dd_player',playerId:'${p.id}'})" title="found the Daily Double">⭐</button>` : ''}
+      <button class="good" style="padding:4px 10px" onclick="send({type:'host_award',playerId:'${p.id}',correct:true})" ${!state.current?'disabled':''}>✔</button>
+      <button class="danger" style="padding:4px 10px" onclick="send({type:'host_award',playerId:'${p.id}',correct:false})" ${!state.current?'disabled':''}>✘</button>
+      <button class="ghost" style="padding:4px 10px" onclick="send({type:'host_adjust',playerId:'${p.id}',delta:100})">+100</button>
+      <button class="ghost" style="padding:4px 10px" onclick="send({type:'host_adjust',playerId:'${p.id}',delta:-100})">−100</button>
+      <button class="ghost" style="padding:4px 10px" onclick="if(confirm('Remove?'))send({type:'host_remove_player',playerId:'${p.id}'})">🗑</button>
+    </div>`).join('') || '<div class="muted">Nobody joined yet.</div>';
+
+  // timer
+  const t = state.timer;
+  document.getElementById('timerInfo').textContent = t.running ? '⏱ ' + Math.max(0, Math.ceil((t.endsAt - Date.now()) / 1000)) + 's' : '';
+  if (t.running) setTimeout(() => { if (S && S.timer.running) render(S); }, 500);
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeHtml2(s){ return s; }
+
+// network info + QRs
+fetch('/api/info').then(r => r.json()).then(info => {
+  document.getElementById('netInfo').innerHTML =
+    `Same WiFi required! Server port <b>${info.port}</b>, this machine: <b>${info.ips.join(', ') || '?'}</b>`;
+});
+fetch('/api/qr?target=player').then(r => r.json()).then(d => {
+  document.getElementById('qrPlayer').src = d.qr;
+  document.getElementById('urlPlayer').textContent = d.url;
+});
+fetch('/api/qr?target=board').then(r => r.json()).then(d => {
+  document.getElementById('qrBoard').src = d.qr;
+  document.getElementById('urlBoard').textContent = d.url;
+});
+</script>
+</body>
+</html>

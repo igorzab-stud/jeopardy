@@ -1,0 +1,64 @@
+{
+  "categories": [
+    {
+      "title": "SCIENCE",
+      "clues": [
+        { "value": 200, "question": "This planet is known as the Red Planet.", "answer": "What is Mars?", "image": "https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg" },
+        { "value": 400, "question": "H2O is the chemical formula for this.", "answer": "What is water?" },
+        { "value": 600, "question": "This force keeps us on the ground and makes apples fall.", "answer": "What is gravity?" },
+        { "value": 800, "question": "The powerhouse of the cell.", "answer": "What is the mitochondria?" },
+        { "value": 1000, "question": "This physicist developed the theory of relativity (E = mc²).", "answer": "Who is Albert Einstein?", "image": "https://upload.wikimedia.org/wikipedia/commons/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg" }
+      ]
+    },
+    {
+      "title": "MOVIES",
+      "clues": [
+        { "value": 200, "question": "A young lion prince who must reclaim his throne in this 1994 Disney film.", "answer": "What is The Lion King?" },
+        { "value": 400, "question": "This wizard with a lightning scar attends Hogwarts.", "answer": "Who is Harry Potter?" },
+        { "value": 600, "question": "In this film, a ship hits an iceberg; Jack and Rose fall in love aboard it.", "answer": "What is Titanic?", "image": "https://upload.wikimedia.org/wikipedia/commons/f/fd/RMS_Titanic_3.jpg" },
+        { "value": 800, "question": "This 1999 sci-fi film asks: do you take the red pill or the blue pill?", "answer": "What is The Matrix?" },
+        { "value": 1000, "question": "He directed Jaws, E.T., Jurassic Park and Schindler's List.", "answer": "Who is Steven Spielberg?" }
+      ]
+    },
+    {
+      "title": "GEOGRAPHY",
+      "clues": [
+        { "value": 200, "question": "The largest desert in the world (hot, in northern Africa).", "answer": "What is the Sahara?" },
+        { "value": 400, "question": "This capital city has the Eiffel Tower.", "answer": "What is Paris?", "image": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg" },
+        { "value": 600, "question": "The longest river in the world (disputed with the Amazon, but traditionally this one in Africa).", "answer": "What is the Nile?" },
+        { "value": 800, "question": "This country has the most natural lakes in the world.", "answer": "What is Canada?" },
+        { "value": 1000, "question": "The only continent that spans all four hemispheres.", "answer": "What is Africa?" }
+      ]
+    },
+    {
+      "title": "FOOD & DRINK",
+      "clues": [
+        { "value": 200, "question": "This Italian dish is a flat round bread with tomato, cheese and toppings.", "answer": "What is pizza?", "image": "https://upload.wikimedia.org/wikipedia/commons/a/a3/Eq_it-na_pizza-margherita_sep2005_sml.jpg" },
+        { "value": 400, "question": "Sushi is a famous dish from this country.", "answer": "What is Japan?", "image": "https://upload.wikimedia.org/wikipedia/commons/6/60/Sushi_platter.jpg" },
+        { "value": 600, "question": "This fruit keeps the doctor away, according to the saying.", "answer": "What is an apple?", "image": "https://upload.wikimedia.org/wikipedia/commons/1/15/Red_Apple.jpg" },
+        { "value": 800, "question": "This spice, made from dried crocus flowers, is the most expensive in the world.", "answer": "What is saffron?" },
+        { "value": 1000, "question": "This country drinks the most coffee per person in the world.", "answer": "What is Finland?" }
+      ]
+    },
+    {
+      "title": "HISTORY",
+      "clues": [
+        { "value": 200, "question": "The first man to walk on the Moon (1969).", "answer": "Who is Neil Armstrong?", "image": "https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg" },
+        { "value": 400, "question": "This wall in Berlin fell in 1989.", "answer": "What is the Berlin Wall?" },
+        { "value": 600, "question": "Ancient pyramids and the Sphinx are found in this country.", "answer": "What is Egypt?", "image": "https://upload.wikimedia.org/wikipedia/commons/e/e3/Kheops-Pyramid.jpg" },
+        { "value": 800, "question": "This ocean liner sank on its maiden voyage in 1912.", "answer": "What is the Titanic?" },
+        { "value": 1000, "question": "This empire built the Colosseum and spoke Latin.", "answer": "What is the Roman Empire?", "image": "https://upload.wikimedia.org/wikipedia/commons/5/53/Colosseum_in_Rome%2C_Italy_-_April_2007.jpg" }
+      ]
+    },
+    {
+      "title": "TECH & INTERNET",
+      "clues": [
+        { "value": 200, "question": "This company makes the iPhone.", "answer": "Who is Apple?", "image": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" },
+        { "value": 400, "question": "WWW stands for this.", "answer": "What is the World Wide Web?" },
+        { "value": 600, "question": "This site with a play-button logo is the biggest video platform.", "answer": "What is YouTube?" },
+        { "value": 800, "question": "He co-founded Microsoft with Paul Allen.", "answer": "Who is Bill Gates?" },
+        { "value": 1000, "question": "This programming language runs in every web browser (and this very game uses it).", "answer": "What is JavaScript?" }
+      ]
+    }
+  ]
+}

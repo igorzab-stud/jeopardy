@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JEOPARDY! — Board</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">JEOPARDY! <small>MAIN SCREEN 📺</small></div>
+  <div class="nav">
+    <button data-mute class="ghost" onclick="JSound.setMuted(!JSound.isMuted())">🔊 Mute</button>
+    <button class="ghost" onclick="JSound.thinkMusic(30)">🎵 Think music</button>
+    <a href="/host">Host</a><a href="/player">Join</a>
+  </div>
+</div>
+<div class="wrap">
+  <div id="splash" class="splash" style="display:none">
+    <div class="splash-logo">JEOPARDY!</div>
+    <div class="splash-sub">🎬 Waiting for the host to start the show…</div>
+    <div class="muted" style="margin-top:10px">Players join at <b class="gold" id="joinUrl2"></b></div>
+  </div>
+  <div id="board" class="board-grid"></div>
+  <div id="scores" class="scores"></div>
+  <div class="muted" style="margin-top:10px">Players join at <b id="joinUrl" class="gold"></b> &nbsp;•&nbsp; <span id="conn" class="conn"></span></div>
+</div>
+
+<div id="modal" class="modal-backdrop">
+  <div class="clue-card">
+    <div id="mValue" class="clue-value"></div>
+    <div id="mQ" class="clue-text"></div>
+    <img id="mImg" class="clue-img" alt="" style="display:none">
+    <div id="mA" class="clue-answer" style="display:none"></div>
+    <div id="mBuzz"></div>
+    <div id="mTimer" class="timer-big"></div>
+  </div>
+</div>
+
+<script src="/sound.js"></script>
+<script src="/common.js"></script>
+<script>
+document.getElementById('joinUrl').textContent = location.host + '/player';
+document.getElementById('joinUrl2').textContent = location.host + '/player';
+const boardEl = document.getElementById('board');
+const scoresEl = document.getElementById('scores');
+const splashEl = document.getElementById('splash');
+const modal = document.getElementById('modal');
+let timerIv = null;
+let lastGridKey = '';
+// broken image link? just hide it, never break the layout
+document.getElementById('mImg').onerror = function () { this.style.display = 'none'; };
+let wasPlaying = false;
+
+const sock = J.connect({
+  onStatus: s => document.getElementById('conn').textContent = s,
+  onState: render,
+  onEvent: () => {},
+});
+
+function gridKey(state) {
+  return state.show.phase + '|' + state.show.revealed + '|' +
+    state.board.map(c => c.clues.map(cl => cl.answered ? '1' : '0').join('')).join('');
+}
+
+function render(state) {
+  const playing = state.show.phase === 'playing';
+  const revealing = state.show.phase === 'revealing';
+  splashEl.style.display = state.show.phase === 'idle' ? '' : 'none';
+
+  // board grid — rebuild only when something visible changed (protects CSS animations)
+  const key = gridKey(state);
+  if (key !== lastGridKey) {
+    lastGridKey = key;
+    boardEl.innerHTML = '';
+    state.board.forEach((cat, c) => {
+      const h = document.createElement('div');
+      if (c < state.show.revealed) {
+        h.className = 'cat-header' + ((revealing && c === state.show.revealed - 1) ? ' pop' : '');
+        h.textContent = cat.title;
+      } else {
+        h.className = 'cat-hidden';
+        h.textContent = '?';
+      }
+      boardEl.appendChild(h);
+    });
+    for (let r = 0; r < 5; r++) {
+      state.board.forEach((cat, c) => {
+        const clue = cat.clues[r];
+        const d = document.createElement('div');
+        if (!playing) {
+          d.className = 'tile-hidden';
+          d.textContent = '';
+        } else {
+          d.className = 'tile' + (clue.answered ? ' answered' : '');
+          if (!clue.answered && !wasPlaying) {
+            d.classList.add('deal');
+            d.style.animationDelay = ((c + r * 2) * 70) + 'ms'; // cascade like board fill
+          }
+          d.textContent = clue.answered ? '' : '$' + clue.value;
+        }
+        boardEl.appendChild(d);
+      });
+    }
+    wasPlaying = playing;
+  }
+  // scores
+  const sorted = [...state.players].sort((a, b) => b.score - a.score);
+  scoresEl.innerHTML = sorted.map(p => {
+    const win = state.buzz.winnerId === p.id ? ' winner' : '';
+    return `<div class="score-chip${win}"><div class="n">${escapeHtml(p.name)}${p.connected ? '' : ' 💤'}</div><div class="s${p.score < 0 ? ' neg' : ''}">$${p.score}</div></div>`;
+  }).join('') || '<span class="muted">No players yet — join on your phone!</span>';
+
+  // modal
+  if (state.current) {
+    modal.classList.add('show');
+    renderModal(state);
+  } else {
+    modal.classList.remove('show');
+  }
+
+  // timer
+  clearInterval(timerIv);
+  const tEl = document.getElementById('mTimer');
+  if (state.timer.running) {
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((state.timer.endsAt - Date.now()) / 1000));
+      tEl.textContent = left > 0 ? '⏱ ' + left : '';
+      if (left <= 0) clearInterval(timerIv);
+    };
+    tick(); timerIv = setInterval(tick, 250);
+  } else tEl.textContent = '';
+}
+
+function renderModal(state) {
+  const cur = state.current;
+  const mValue = document.getElementById('mValue');
+  const mQ = document.getElementById('mQ');
+  const mImg = document.getElementById('mImg');
+  const mA = document.getElementById('mA');
+  const mBuzz = document.getElementById('mBuzz');
+
+  if (cur.dd && cur.wager == null) {
+    // Daily Double splash: question stays secret until the wager is in
+    const ddP = cur.ddPlayer && state.players.find((p) => p.id === cur.ddPlayer);
+    mValue.textContent = state.board[cur.cat].title + ' • ⭐ DAILY DOUBLE';
+    mQ.textContent = '⭐ DAILY DOUBLE ⭐';
+    mQ.classList.remove('blurred-q');
+    mImg.style.display = 'none';
+    mA.style.display = 'none';
+    mBuzz.innerHTML = ddP
+      ? `<div class="buzz-banner open">${escapeHtml(ddP.name)} — place your wager! 💰</div>`
+      : `<div class="buzz-banner open">Who found it? Host picks… ⭐</div>`;
+    return;
+  }
+
+  mValue.textContent =
+    state.board[cur.cat].title + ' • $' + cur.value + (cur.dd ? ' • ⭐ DD $' + cur.wager : '');
+  mQ.textContent = cur.question;
+  // optional picture question — only swaps src when it actually changed (no flicker)
+  if (cur.image) {
+    if (mImg.dataset.src !== cur.image) {
+      mImg.dataset.src = cur.image;
+      mImg.src = cur.image;
+    }
+    mImg.style.display = '';
+  } else {
+    mImg.style.display = 'none';
+    mImg.removeAttribute('src');
+    delete mImg.dataset.src;
+  }
+  // question blurs the instant someone buzzes (unblurs if they're wrong
+  // and nobody holds the buzzer; stays readable once the answer is revealed)
+  mQ.classList.toggle('blurred-q', !!state.buzz.winnerId && !cur.answerRevealed);
+  if (cur.answerRevealed) {
+    mA.style.display = '';
+    mA.textContent = cur.answer;
+  } else {
+    mA.style.display = 'none';
+  }
+  if (state.buzz.winnerId) {
+    const w = state.players.find((p) => p.id === state.buzz.winnerId);
+    mBuzz.innerHTML = `<div class="buzz-banner">🔔 ${escapeHtml(w ? w.name : '?')} BUZZED!</div>`;
+  } else if (state.buzz.open) {
+    mBuzz.innerHTML = `<div class="buzz-banner open">BUZZERS OPEN — hit it! 🔔</div>`;
+  } else {
+    mBuzz.innerHTML = '';
+  }
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>
